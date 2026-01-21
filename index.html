@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Ficha EPI - Coelho Empreiteira</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+    <div class="no-print">
+        1. 📑 Excel: <input type="file" id="inputExcel" accept=".xlsx, .xls">
+        2. 📁 Fotos: <input type="file" id="inputPasta" webkitdirectory directory multiple>
+        3. 👤 Nome: <select id="selectColaborador" onchange="preencher()" style="width:180px;"></select>
+        <button onclick="window.print()" style="padding:5px 15px; cursor:pointer; background:#2e7d32; color:white; border:none; font-weight:bold; margin-left:10px;">IMPRIMIR</button>
+    </div>
+
+    <div class="page">
+        <div class="border-container">
+            <div class="header">
+                <div class="logo-area">
+                    <img src="./uploads/logo.png" alt="Logo">
+                </div>
+                <div class="company-info">
+                    <strong>COELHO EMPREITEIRA</strong><br>
+                    AV. OCTACILIO COUTINHO DE FREITAS, 210, JD. MARAVILHA - SERRANA/SP<br>
+                    Email: contato@coelhoemp.com | CNPJ: 09.364.998/0001-88<br>
+                    TEL: (16) 99298-7484 | (16) 98116-9274
+                </div>
+                <div class="foto-area">
+                    <span style="font-size: 22px;">🥾🦺🧤</span>
+                    <div class="foto-3x4">
+                        <img id="img-colab" src="" style="display:none;">
+                        <span id="placeholder-foto" style="font-size: 10px; color: #999;">FOTO 3X4</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="title-bar">FICHA CONTROLE DE EPI (EQUIPAMENTO DE PROTEÇÃO INDIVIDUAL) E UNIFORMES</div>
+
+            <div class="data-grid">
+                <div class="cell" style="grid-column: span 2;height: 30px;">
+                    <span class="label">COLABORADOR:</span>
+                    <input id="c-nome">
+                </div>
+
+                <div class="cell">
+                    <span class="label">FUNÇÃO:</span>
+                    <input id="c-funcao">
+                </div>
+                <div class="cell">
+                    <span class="label">CPF:</span>
+                    <input id="c-cpf">
+                </div>
+
+                <div class="cell">
+                    <span class="label">CTPS:</span>
+                    <input id="c-ctps">
+                </div>
+
+                <div class="cell">
+                    <span class="label">SETOR:</span>
+                    <input id="c-setor" value="CARPINTARIA" readonly>
+                </div>
+            </div>
+
+            <div class="grupo-tree">
+                <div class="cell">
+                    <span class="label">ADMISSÃO:</span>
+                    <input id="c-adm">
+                </div>
+
+                <div class="cell">
+                    <span class="label">MATRÍCULA:</span>
+                    <input id="c-matri">
+                </div>
+
+                <div class="cell" style="grid-column: span 2;">
+                    <span class="label">ANO:</span>
+                    <input id="c-ano" value="2026">
+                </div>
+            </div>
+
+            <div class="content-flex">
+                <div class="termo-box">
+                    <span class="section-title">TERMO DE RESPONSABILIDADE</span>
+                    Declaro estar recebendo o(s) Equipamento(s) de Proteção Individual (EPI), fornecido(s) gratuitamente por esta empresa, em perfeito estado de conservação e funcionamento. Declaro também ter recebido da empresa treinamento sobre o uso correto e comprometo-me a usá-lo(s) apenas a que se destina e dentro da empresa, responsabilizando-me por sua guarda e conservação, em atendimento a determinação legal da <strong>Norma Regulamentadora n° 06 e alíneas da portaria n° 321478</strong>. Declaro ainda estar ciente que quando houver o meu desligamento da empresa, por qualquer motivo que seja, terei a obrigação de devolvê-lo(s).
+                    <br><br>
+                    Em caso de perda, extravio ou inutilização proposital do material recebido, autorizo a empresa, na forma prevista no <strong>parágrafo primeiro do Art. 462 da CLT</strong>, a descontar de meu salário a importância correspondente ao valor material.
+                </div>
+
+                <div class="legislacao-box">
+                    <span class="section-title">LEGISLAÇÃO E NORMAS CITADAS:</span>
+                    <strong>NR-1:</strong> a) Cumprir as disposições legais e regulamentares sobre segurança e saúde do trabalho; b) Usar o EPI fornecido pelo empregador; c) Submeter-se aos exames médicos previstos; d) Colaborar com a empresa na aplicação das normas.
+                    <br><strong>Item 1.8.1:</strong> Constitui ato faltoso a recusa insignificada ao cumprimento do disposto no item anterior.
+                    <br><strong>NR-6:</strong> a) Usar apenas para a finalidade a que se destina; b) Responsabilizar-se pela guarda e conservação; c) Comunicar qualquer alteração que o torne impróprio para uso; d) Cumprir determinações sobre o uso adequado.
+                    <div class="clt-highlight">
+                        Art. 462, § 1ª (CLT) – Em caso de dano causado pelo empregado, o desconto será lícito desde que esta possibilidade tenha sido acordada ou na ocorrência de dolo.
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer">
+                <div class="ciente-box">
+                    Ciente em: <input type="text" id="data-atual" style="border-bottom: 1px solid black; width: 100px; text-align: center;">
+                </div>
+                <div class="sig-container">
+                    <div class="sig-line"></div>
+                    <span id="nome-assinatura">NOME DO COLABORADOR</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="page page-break">
+        <div class="border-container">
+            <div class="title-bar">FICHA CONTROLE DE EPI (EQUIPAMENTO DE PROTEÇÃO INDIVIDUAL) E UNIFORMES</div>
+
+            <div class="data-grid">
+                <div class="cell" style="grid-column: span 6; height: 30px; padding: 0;">
+                    <span class="label">COLABORADOR:</span>
+                    <input id="c2-nome" readonly>
+                </div>
+
+                <div class="cell" style="grid-column: span 3;">
+                    <span class="label">FUNÇÃO:</span>
+                    <input id="c2-funcao">
+                </div>
+                <div class="cell" style="grid-column: span 3;">
+                    <span class="label">CPF:</span>
+                    <input id="c2-cpf">
+                </div>
+
+                <div class="cell" style="grid-column: span 3;">
+                    <span class="label">CTPS:</span>
+                    <input id="c2-ctps">
+                </div>
+
+                <div class="cell" style="grid-column: span 3;">
+                    <span class="label">SETOR:</span>
+                    <input id="c2-setor" value="CARPINTARIA" readonly>
+                </div>
+
+                <div class="cell" style="grid-column: span 2;">
+                    <span class="label">ADMISSÃO:</span>
+                    <input id="c2-adm">
+                </div>
+                <div class="cell" style="grid-column: span 2;">
+                    <span class="label">MATRÍCULA:</span>
+                    <input id="c2-matri">
+                </div>
+                <div class="cell" style="grid-column: span 2;">
+                    <span class="label">ANO:</span>
+                    <input id="c2-ano">
+                </div>
+            </div>
+
+            <div class="epi-table" id="tabela-itens">
+                <div class="epi-header">DEVOLUÇÃO?</div>
+                <div class="epi-header">DATA ENTREGA</div>
+                <div class="epi-header">DESCRIÇÃO DO EPI</div>
+                <div class="epi-header">QTD</div>
+                <div class="epi-header">FABRICANTE</div>
+                <div class="epi-header">C.A</div>
+                <div class="epi-header">VALIDADE</div>
+                <div class="epi-header">ASSINATURA</div>
+
+                <div class="epi-item">
+                    <select id="trigger-inicial" onchange="processarEntregaExcel(this)">
+                        <option value="nao">NÃO</option>
+                        <option value="inicial">INICIAL</option>
+                    </select>
+                </div>
+                <div class="epi-item"><input type="text" id="data-0"></div>
+                <div class="epi-item"><input type="text" id="desc-0" class="text-left"></div>
+                <div class="epi-item"><input type="text" id="qtd-0"></div>
+                <div class="epi-item"><input type="text" id="fab-0"></div>
+                <div class="epi-item"><input type="text" id="ca-0"></div>
+                <div class="epi-item"><input type="text" id="val-0"></div>
+                <div class="epi-item"></div>
+
+                <script>
+                    for(let i=1; i<20; i++){
+                        document.write(`
+                            <div class="epi-item"><input type="text" id="dev-${i}"></div>
+                            <div class="epi-item"><input type="text" id="data-${i}"></div>
+                            <div class="epi-item"><input type="text" id="desc-${i}" class="text-left"></div>
+                            <div class="epi-item"><input type="text" id="qtd-${i}"></div>
+                            <div class="epi-item"><input type="text" id="fab-${i}"></div>
+                            <div class="epi-item"><input type="text" id="ca-${i}"></div>
+                            <div class="epi-item"><input type="text" id="val-${i}"></div>
+                            <div class="epi-item"></div>
+                        `);
+                    }
+                </script>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
