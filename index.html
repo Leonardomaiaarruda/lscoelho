@@ -5,14 +5,20 @@
     <title>Ficha EPI - Coelho Empreiteira</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
 <body>
 
     <div class="no-print">
-        1. 📑 Excel: <input type="file" id="inputExcel" accept=".xlsx, .xls">
-        2. 📁 Fotos: <input type="file" id="inputPasta" webkitdirectory directory multiple>
-        3. 👤 Nome: <select id="selectColaborador" onchange="preencher()" style="width:180px;"></select>
-        <button onclick="window.print()" style="padding:5px 15px; cursor:pointer; background:#2e7d32; color:white; border:none; font-weight:bold; margin-left:10px;">IMPRIMIR</button>
+        📑 Excel: <input type="file" id="inputExcel" accept=".xlsx, .xls">
+        👤 Nome: <select id="selectColaborador" onchange="preencher()" style="width:180px;"></select>
+        
+        <span class="mobile-only-label">📦 Carregar EPIs Inicial?</span>
+        <select id="mobile-trigger-inicial" onchange="sincronizarMobile(this)">
+            <option value="nao">NÃO</option>
+            <option value="inicial">SIM (INICIAL)</option>
+        </select>
+        <button onclick="window.print()" class="print-button">IMPRIMIR</button>
     </div>
 
     <div class="page">
