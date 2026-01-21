@@ -312,3 +312,99 @@ input {
 .epi-item:nth-of-type(16n+16) {
     background-color: #f2f2f2 !important;
 }
+
+
+/* --- RESET E VARIÁVEIS --- */
+:root {
+    --primary-green: #2e7d32;
+    --dark-panel: #1e272e;
+}
+
+/* --- INTERFACE DE CONTROLE (NO-PRINT) --- */
+.no-print {
+    background: var(--dark-panel);
+    padding: 15px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    position: sticky;
+    top: 0;
+    z-index: 9999;
+}
+
+.no-print input, .no-print select, .no-print button {
+    height: 45px;
+    border-radius: 8px;
+    border: 1px solid #3d4d5a;
+    background: #2c3e50;
+    color: white;
+    padding: 0 12px;
+    font-size: 14px;
+}
+
+.no-print button {
+    background: var(--primary-green);
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+}
+
+/* --- COMPORTAMENTO NO MOBILE (SOLUÇÃO DEFINITIVA) --- */
+@media (max-width: 768px) {
+    /* 1. Esconde a ficha técnica complexa que quebra o layout */
+    .page {
+        display: none !important; 
+    }
+
+    /* 2. Cria um aviso ou modo de exibição simples para conferência */
+    body::after {
+        content: "📄 Modo de Visualização Mobile: Selecione o colaborador acima. A ficha completa será gerada no botão IMPRIMIR.";
+        display: block;
+        padding: 40px 20px;
+        color: white;
+        text-align: center;
+        font-weight: bold;
+        line-height: 1.6;
+    }
+
+    /* 3. Ajusta os controles para ocupar a tela toda */
+    .no-print {
+        flex-direction: column;
+        height: auto;
+    }
+    
+    .no-print > * {
+        width: 100% !important;
+    }
+
+    /* 4. Mostra apenas os campos essenciais para conferência se desejar */
+    body {
+        background: #2f3542;
+        overflow-x: hidden;
+    }
+}
+
+/* --- CONFIGURAÇÃO DE IMPRESSÃO (Onde a mágica acontece) --- */
+@media print {
+    /* Esconde avisos de mobile e controles */
+    .no-print, body::after { display: none !important; }
+    
+    /* Força a ficha a aparecer PERFEITA no papel */
+    .page { 
+        display: block !important; 
+        width: 297mm !important;
+        height: 209mm !important;
+        margin: 0 !important;
+        padding: 5mm !important;
+        transform: none !important;
+        border: none !important;
+    }
+
+    body { background: white !important; }
+
+    @page { 
+        size: landscape; 
+        margin: 0; 
+    }
+}
