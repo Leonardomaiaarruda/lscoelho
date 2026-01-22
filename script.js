@@ -106,6 +106,34 @@ function preencher() {
             }
         }
     }
+
+
+    const inputFuncao1 = document.getElementById('c-funcao');
+    const inputFuncao2 = document.getElementById('c2-funcao');
+
+    function aplicarCorCargo(elemento, cargo) {
+        if (!elemento) return;
+        
+        // Limpa a cor anterior
+        elemento.style.backgroundColor = "";
+        elemento.style.color = "black"; // Cor padrão do texto
+
+        const cargoTexto = cargo.toUpperCase();
+
+        if (cargoTexto.includes("AUXILIAR")) {
+            elemento.style.backgroundColor = "yellow";
+        } else if (cargoTexto.includes("CARPINTEIRO")) {
+            elemento.style.backgroundColor = "red";
+            elemento.style.color = "white"; // Melhora leitura no vermelho
+        } else if (cargoTexto.includes("ENCARREGADO")) {
+            elemento.style.backgroundColor = "blue";
+            elemento.style.color = "white"; // Melhora leitura no azul
+        }
+    }
+
+    // Aplica nas duas fichas
+    aplicarCorCargo(inputFuncao1, funcao);
+    aplicarCorCargo(inputFuncao2, funcao);
 }
 
 // 5. PROCESSAMENTO DE EPIS (CONTROLADO PELO MENU SUPERIOR)
