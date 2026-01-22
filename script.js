@@ -7,9 +7,7 @@ let dadosPlanilha = [];
 
 // 1. INICIALIZAÇÃO
 document.addEventListener('DOMContentLoaded', () => {
-    const campoData = document.getElementById('data-atual');
-    if (campoData) campoData.value = new Date().toLocaleDateString('pt-BR');
-
+    // Removido o preenchimento automático da data-atual para deixá-la vazia
     const inputExcel = document.getElementById('inputExcel');
     if (inputExcel) inputExcel.addEventListener('change', carregarExcel);
 });
