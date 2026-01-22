@@ -357,7 +357,7 @@ input {
 .border-container::before {
     content: "";
     position: absolute;
-    top: 60%;
+    top: 50%;
     left: 50%;
     transform: translate(-50%, -50%); /* Centraliza perfeitamente */
     width: 1000px; /* Tamanho da logo no fundo */
@@ -372,9 +372,6 @@ input {
 }
 
 /* Ajuste específico para os campos ficarem transparentes e a logo aparecer */
-input, select, .termo-box, .legislacao-box {
-    background: transparent !important;
-}
 
 /* --- COMPORTAMENTO NO MOBILE (SOLUÇÃO DEFINITIVA) --- */
 @media (max-width: 768px) {
