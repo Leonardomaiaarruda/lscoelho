@@ -14,22 +14,20 @@ document.addEventListener('DOMContentLoaded', () => {
     if (inputExcel) inputExcel.addEventListener('change', carregarExcel);
 });
 
+// 2. FUNÇÃO PARA FORMATAR LINK DO DRIVE (CORRIGIDA)
 function formatarLinkDrive(link) {
     if (!link) return "";
     link = link.toString().trim();
-    
-    // Extrai o ID do arquivo do link (funciona com /file/d/ID/view ou ?id=ID)
     const regExp = /(?:id=|\/d\/)([\w-]+)/;
     const matches = link.match(regExp);
     
     if (matches && matches[1]) {
-        const fileId = matches[1];
-        // Este é o formato de link de miniatura (thumbnail) que o Google Drive permite carregar externamente com menos bloqueios
-        return `https://lh3.googleusercontent.com/u/0/d/${fileId}=w400-h400-p`;
+        // Link direto via thumbnail (mais estável para navegadores)
+        return `https://lh3.googleusercontent.com/d/${matches[1]}`;
     }
-    
     return link; 
 }
+
 // 3. CARREGAMENTO DO EXCEL
 function carregarExcel(e) {
     const reader = new FileReader();
@@ -49,7 +47,7 @@ function carregarExcel(e) {
     reader.readAsArrayBuffer(e.target.files[0]);
 }
 
-// 4. PREENCHIMENTO AUTOMÁTICO
+// 4. PREENCHIMENTO AUTOMÁTICO (DADOS PESSOAIS)
 function preencher() {
     const idx = document.getElementById('selectColaborador').value;
     if(idx === "" || !dadosPlanilha[idx]) return;
@@ -83,13 +81,12 @@ function preencher() {
     const sig = document.getElementById('nome-assinatura');
     if (sig) sig.innerText = nome;
 
+    // Lógica da Foto
     const img = document.getElementById('img-colab');
     const placeholder = document.getElementById('placeholder-foto');
-    
     if (img) {
         const linkBruto = linha['FOTO'] || linha['foto'] || "";
         const urlDireta = formatarLinkDrive(linkBruto);
-
         if (urlDireta) {
             img.src = urlDireta;
             img.style.display = 'block';
@@ -111,28 +108,24 @@ function preencher() {
     }
 }
 
-// 5. PROCESSAMENTO DE EPIS (COM FUNÇÃO DE LIMPEZA ATUALIZADA)
-function processarEntregaExcel(selectElement) {
-    if (!selectElement) return;
-
-    // --- LÓGICA DE LIMPEZA ---
-    if (selectElement.value === "nao") {
+// 5. PROCESSAMENTO DE EPIS (CONTROLADO PELO MENU SUPERIOR)
+function processarEntregaExcel(valor) {
+    // 1. LÓGICA DE LIMPEZA (Se valor for "nao")
+    if (valor === "nao") {
         for (let i = 0; i < 20; i++) {
-            // Limpa todos os IDs possíveis da tabela
-            const camposParaLimpar = [`dev-${i}`, `data-${i}`, `desc-${i}`, `qtd-${i}`, `fab-${i}`, `ca-${i}`, `val-${i}`];
-            camposParaLimpar.forEach(id => {
+            const campos = [`dev-${i}`, `data-${i}`, `desc-${i}`, `qtd-${i}`, `fab-${i}`, `ca-${i}`, `val-${i}`];
+            campos.forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.value = "";
             });
         }
-        return; // Encerra a função aqui pois só queríamos limpar
+        return;
     }
 
-    // --- LÓGICA DE PREENCHIMENTO ---
-    if (selectElement.value === "inicial") {
+    // 2. LÓGICA DE PREENCHIMENTO (Se valor for "inicial")
+    if (valor === "inicial") {
         if (dadosPlanilha.length === 0) {
             alert("⚠️ Carregue a planilha Excel primeiro!");
-            selectElement.value = "nao";
             return;
         }
 
@@ -147,10 +140,10 @@ function processarEntregaExcel(selectElement) {
             if (i < 20) {
                 const desc = linha['DESCRIÇÃO DO EPI'] || linha['DESCRIÇÃO'] || linha['ITEM'] || "";
                 if (desc) {
-                    if (i > 0) {
-                        const dev = document.getElementById(`dev-${i}`);
-                        if (dev) dev.value = "INICIAL";
-                    }
+                    // Preenche "INICIAL" na coluna devolução
+                    const dev = document.getElementById(`dev-${i}`);
+                    if (dev) dev.value = "INICIAL";
+
                     const campoData = document.getElementById(`data-${i}`);
                     if (campoData) campoData.value = formatarData(linha['DATA DE ENTREGA'] || linha['DATA']) || dataHoje;
                     
@@ -180,15 +173,10 @@ function processarEntregaExcel(selectElement) {
     }
 }
 
-// 6. SINCRONIZAÇÃO MOBILE
+// 6. SINCRONIZAÇÃO DO MENU SUPERIOR
 function sincronizarMobile(elMobile) {
-    const valor = elMobile.value;
-    const triggerTabela = document.getElementById('trigger-inicial');
-    
-    if (triggerTabela) {
-        triggerTabela.value = valor;
-        processarEntregaExcel(triggerTabela);
-    }
+    // Agora enviamos o valor direto para a função de processamento
+    processarEntregaExcel(elMobile.value);
 }
 
 // 7. AJUSTE DE IMPRESSÃO
