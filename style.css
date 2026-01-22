@@ -413,6 +413,11 @@ input {
     /* Esconde avisos de mobile e controles */
     .no-print, body::after { display: none !important; }
     
+     input {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    
     /* Força a ficha a aparecer PERFEITA no papel */
     .page { 
         display: block !important; 
@@ -431,3 +436,4 @@ input {
         margin: 0; 
     }
 }
+
