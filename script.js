@@ -14,7 +14,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (inputExcel) inputExcel.addEventListener('change', carregarExcel);
 });
 
-// 2. FUNÇÃO PARA FORMATAR LINK DO DRIVE
 function formatarLinkDrive(link) {
     if (!link) return "";
     link = link.toString().trim();
@@ -31,7 +30,6 @@ function formatarLinkDrive(link) {
     
     return link; 
 }
-
 // 3. CARREGAMENTO DO EXCEL
 function carregarExcel(e) {
     const reader = new FileReader();
