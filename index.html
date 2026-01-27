@@ -45,7 +45,7 @@
         <button onclick="window.print()" class="print-button">IMPRIMIR</button>
     </div>
 
-    <div class="page">
+    <div class="page" id="pagina-1">
         <div class="border-container">
             <div class="header">
                 <div class="logo-area">
@@ -139,11 +139,12 @@
         </div>
     </div>
 
-   <div class="page page-break">
+   <div class="page page-break" id="pagina-tabela">
     <div class="border-container">
-        <div class="title-bar esconder-na-reimpressao">FICHA CONTROLE DE EPI (EQUIPAMENTO DE PROTEÇÃO INDIVIDUAL) E UNIFORMES</div>
+      <div class="page-none">
+        <div class="title-bar">FICHA CONTROLE DE EPI (EQUIPAMENTO DE PROTEÇÃO INDIVIDUAL) E UNIFORMES</div>
 
-        <div class="sessao-colaborador esconder-na-reimpressao">
+        <div class="sessao-colaborador">
             <div class="data-grid">
                 <div class="cell" style="grid-column: span 6; height: 30px; padding: 0;">
                     <span class="label">COLABORADOR:</span>
@@ -179,9 +180,10 @@
                 </div>
             </div>
         </div>
+            </div>
 
         <div class="epi-table" id="tabela-itens">
-            <div class="epi-header esconder-na-reimpressao">DEVOLUÇÃO?</div>
+            <div class="epi-header esconder-na-reimpressao ">DEVOLUÇÃO?</div>
             <div class="epi-header esconder-na-reimpressao">DATA ENTREGA</div>
             <div class="epi-header esconder-na-reimpressao">DESCRIÇÃO DO EPI</div>
             <div class="epi-header esconder-na-reimpressao">QTD</div>
