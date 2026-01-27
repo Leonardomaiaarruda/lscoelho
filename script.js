@@ -1,13 +1,14 @@
 /**
  * SISTEMA DE FICHA DE EPI - COELHO EMPREITEIRA
- * Fotos via Google Drive | Dados via Excel Local
+ * Fotos via Google Drive | Dados via Excel Local | Consulta Nuvem via Google Apps Script
  */
 
 let dadosPlanilha = [];
+// URL do seu Google Apps Script
+const URL_NUVEM = "https://script.google.com/macros/s/AKfycbyZPyhDd70Ez-KbJBBTl07Vffpf6Vl2Qexi00Qh1BJdIFbHU7aq50ONE74GEVpeqMZIZg/exec";
 
 // 1. INICIALIZAÇÃO
 document.addEventListener('DOMContentLoaded', () => {
-    // Removido o preenchimento automático da data-atual para deixá-la vazia
     const inputExcel = document.getElementById('inputExcel');
     if (inputExcel) inputExcel.addEventListener('change', carregarExcel);
 });
@@ -18,15 +19,14 @@ function formatarLinkDrive(link) {
     link = link.toString().trim();
     const regExp = /(?:id=|\/d\/)([\w-]+)/;
     const matches = link.match(regExp);
-    
     if (matches && matches[1]) {
-        // Link direto via thumbnail (mais estável para navegadores)
-        return `https://lh3.googleusercontent.com/d/${matches[1]}`;
+        // Corrigido: Adicionado o $ para a variável matches[1]
+        return `https://lh3.googleusercontent.com/u/0/d/${matches[1]}`;
     }
     return link; 
 }
 
-// 3. CARREGAMENTO DO EXCEL
+// 3. CARREGAMENTO DO EXCEL LOCAL
 function carregarExcel(e) {
     const reader = new FileReader();
     reader.onload = function(e) {
@@ -45,13 +45,20 @@ function carregarExcel(e) {
     reader.readAsArrayBuffer(e.target.files[0]);
 }
 
-// 4. PREENCHIMENTO AUTOMÁTICO (DADOS PESSOAIS)
-function preencher() {
-    const idx = document.getElementById('selectColaborador').value;
-    if(idx === "" || !dadosPlanilha[idx]) return;
+// 4. PREENCHIMENTO AUTOMÁTICO E BUSCA NA NUVEM
+async function preencher() {
+    const select = document.getElementById('selectColaborador');
+    if (select.disabled) return; // Não faz nada se estiver travado
+
+    const idx = select.value;
+    if (idx === "" || !dadosPlanilha[idx]) return;
+
+
+    // 2. Define a linha de dados atual
     const linha = dadosPlanilha[idx];
 
-    const nome = linha['NOME'] || linha['nome'] || "";
+    // 3. Captura e tratamento de dados básicos
+    const nome = (linha['NOME'] || linha['nome'] || "").trim();
     const funcao = linha['FUNÇÃO'] || linha['função'] || "";
     const cpf = linha['CPF'] || linha['cpf'] || "";
     const matri = linha['N° Folha'] || linha['Nº Folha'] || "";
@@ -60,14 +67,17 @@ function preencher() {
     
     let adm = linha['DATA DE ADMISSÃO'] || linha['DATA DE ADMIMSSÃO'] || "";
     if(typeof adm === 'number') {
+        // Converte data serial do Excel para formato brasileiro
         adm = new Date(Math.round((adm - 25569) * 864e5)).toLocaleDateString('pt-BR');
     }
 
+    // 4. Função auxiliar para preencher inputs com segurança
     const setSafe = (id, val) => {
         const el = document.getElementById(id);
         if (el) el.value = val;
     };
 
+    // 5. Preenchimento dos campos duplicados (Ficha e Canhoto/Cópia)
     const campos = ['nome', 'funcao', 'cpf', 'adm', 'matri', 'ano', 'ctps'];
     const valores = [nome, funcao, cpf, adm, matri, ano, ctps];
 
@@ -76,10 +86,11 @@ function preencher() {
         setSafe(`c2-${campo}`, valores[i]);
     });
 
+    // 6. Atualiza o nome na área de assinatura
     const sig = document.getElementById('nome-assinatura');
     if (sig) sig.innerText = nome;
 
-    // Lógica da Foto
+    // 7. Lógica da Foto (Google Drive)
     const img = document.getElementById('img-colab');
     const placeholder = document.getElementById('placeholder-foto');
     if (img) {
@@ -89,13 +100,6 @@ function preencher() {
             img.src = urlDireta;
             img.style.display = 'block';
             if (placeholder) placeholder.style.display = 'none';
-            img.onerror = () => {
-                img.style.display = 'none';
-                if (placeholder) {
-                    placeholder.style.display = 'block';
-                    placeholder.innerText = "ERRO DRIVE";
-                }
-            };
         } else {
             img.style.display = 'none';
             if (placeholder) {
@@ -105,117 +109,280 @@ function preencher() {
         }
     }
 
-
+    // 8. Cores por Cargo
     const inputFuncao1 = document.getElementById('c-funcao');
     const inputFuncao2 = document.getElementById('c2-funcao');
-
-    function aplicarCorCargo(elemento, cargo) {
-        if (!elemento) return;
-        
-        // Limpa a cor anterior
-        elemento.style.backgroundColor = "";
-        elemento.style.color = "black"; // Cor padrão do texto
-
-        const cargoTexto = cargo.toUpperCase();
-
-        if (cargoTexto.includes("AUXILIAR")) {
-            elemento.style.backgroundColor = "yellow";
-        } else if (cargoTexto.includes("CARPINTEIRO")) {
-            elemento.style.backgroundColor = "red";
-            elemento.style.color = "white"; // Melhora leitura no vermelho
-        } else if (cargoTexto.includes("ENCARREGADO")) {
-            elemento.style.backgroundColor = "blue";
-            elemento.style.color = "white"; // Melhora leitura no azul
-        }
+    if (typeof aplicarCorCargo === "function") {
+        aplicarCorCargo(inputFuncao1, funcao);
+        aplicarCorCargo(inputFuncao2, funcao);
     }
 
-    // Aplica nas duas fichas
-    aplicarCorCargo(inputFuncao1, funcao);
-    aplicarCorCargo(inputFuncao2, funcao);
+    // 9. DISPARA A BUSCA NA NUVEM (EPIs Online)
+    // O nomeIdentificado garante que a busca use o nome exato da planilha local
+    const nomeIdentificado = nome; 
+    buscarDadosNuvem(nomeIdentificado);
+
+    // 10. Limpeza de memória para impressão
+    if (typeof otimizarMemoriaImpressao === "function") {
+        otimizarMemoriaImpressao();
+    }
+}   
+
+function aplicarCorCargo(elemento, cargo) {
+    if (!elemento) return;
+    elemento.style.backgroundColor = "";
+    elemento.style.color = "black";
+    const cargoTexto = cargo.toUpperCase();
+    if (cargoTexto.includes("AUXILIAR")) {
+        elemento.style.backgroundColor = "yellow";
+    } else if (cargoTexto.includes("CARPINTEIRO")) {
+        elemento.style.backgroundColor = "red";
+        elemento.style.color = "white";
+    } else if (cargoTexto.includes("ENCARREGADO")) {
+        elemento.style.backgroundColor = "blue";
+        elemento.style.color = "white";
+    }
 }
 
-// 5. PROCESSAMENTO DE EPIS (CONTROLADO PELO MENU SUPERIOR)
+async function buscarDadosNuvem(nomeBusca) {
+    let modal = document.getElementById('modalInfo');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'modalInfo';
+        modal.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:9999; display:none; justify-content:center; align-items:center;";
+        modal.innerHTML = `<div style="background:white; padding:20px; border-radius:10px; max-width:450px; width:90%; color:black; position:relative;"><div id="modal-body"></div></div>`;
+        document.body.appendChild(modal);
+    }
+    
+    const corpo = document.getElementById('modal-body');
+    modal.style.display = 'flex';
+    corpo.innerHTML = "⌛ Sincronizando dados e calculando linhas...";
+
+    // Função interna para converter número do Excel em Data BR
+    const formatarDataExcel = (valor) => {
+        if (!valor) return "";
+
+        if (!isNaN(valor) && typeof valor === 'number') {
+            const data = new Date(Math.round((valor - 25569) * 864e5));
+            data.setMinutes(data.getMinutes() + data.getTimezoneOffset());
+            return data.toLocaleDateString('pt-BR');
+        }
+
+        if (typeof valor === 'string' && valor.includes('-')) {
+            const partes = valor.split('T')[0].split('-');
+            if (partes.length === 3) {
+                return `${partes[2]}/${partes[1]}/${partes[0]}`;
+            }
+        }
+        return valor;
+    };
+
+    try {
+        const response = await fetch(URL_NUVEM);
+        const dadosNuvem = await response.json();
+        const limpar = (t) => t ? t.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase().trim() : "";
+        const nomeAlvo = limpar(nomeBusca);
+        const dInicio = document.getElementById('dataInicio').value;
+        const dFim = document.getElementById('dataFim').value;
+        
+        // CAPTURA O VALOR DE LINHAS A PULAR
+        const pular = parseInt(document.getElementById('pularLinhas').value) || 0;
+
+        const filtrados = dadosNuvem.filter(linha => {
+            const f = linha.funcionario || linha.Funcionario || Object.values(linha)[0];
+            const dRaw = linha.dataPedido || linha.DATA || Object.values(linha)[2];
+            const dISO = dRaw ? dRaw.toString().split('T')[0] : "";
+            return limpar(f) === nomeAlvo && (!dInicio || dISO >= dInicio) && (!dFim || dISO <= dFim);
+        });
+
+        // Limpa TODAS as 20 linhas da ficha antes de começar para evitar sobreposição visual
+        for (let i = 0; i < 20; i++) {
+            ['data-', 'desc-', 'fab-', 'ca-', 'val-', 'dev-'].forEach(p => { 
+                const el = document.getElementById(p + i);
+                if (el) el.value = ""; 
+            });
+        }
+
+        if (filtrados.length > 0) {
+            filtrados.forEach((reg, index) => {
+                // CALCULA A LINHA ALVO (Index atual + Linhas puladas)
+                const linhaAlvo = index + pular;
+
+                // Só preenche se ainda houver espaço nas 20 linhas da ficha
+                if (linhaAlvo < 20) {
+                    const colNuvem = Object.values(reg);
+                    const epiNuvem = (reg.epi || colNuvem[1] || "").toString().toUpperCase().trim();
+                    const epiBusca = limpar(epiNuvem);
+
+                    const infoLocal = dadosPlanilha.find(item => {
+                        return Object.keys(item).some(key => {
+                            const k = limpar(key);
+                            return (k.includes("EPI") || k.includes("PRODUTO") || k.includes("DESC")) && limpar(item[key]) === epiBusca;
+                        });
+                    });
+
+                    // Função auxiliar ajustada para usar a 'linhaAlvo'
+                    const setV = (p, v) => { 
+                        const el = document.getElementById(p + linhaAlvo); 
+                        if(el) el.value = v; 
+                    };
+                    
+                    setV('data-', formatarDataExcel(reg.dataPedido || colNuvem[2]));
+                    setV('desc-', epiNuvem);
+                    setV('dev-', "NÃO");
+
+                    if (infoLocal) {
+                        Object.keys(infoLocal).forEach(key => {
+                            const k = limpar(key);
+                            let val = infoLocal[key];
+                            
+                            if (k === "FABRICANTE") setV('fab-', val || "NÃO");
+                            if (k === "CA" || k === "C.A") setV('ca-', val || "");
+                            if (k.includes("VALIDADE") && k.includes("C.A")) {
+                                setV('val-', formatarDataExcel(val));
+                            }
+                        });
+                    } else {
+                        setV('fab-', "NÃO");
+                    }
+                }
+            });
+            corpo.innerHTML = `✅ Ficha preenchida a partir da linha ${pular + 1}!`;
+            setTimeout(() => modal.style.display='none', 1000);
+        } else {
+            corpo.innerHTML = "Nenhum dado encontrado.";
+        }
+    } catch (e) { 
+        corpo.innerHTML = "Erro na sincronização."; 
+        console.error(e);
+    }
+}
+
+// 6. FUNÇÃO PARA FECHAR O MODAL (Conserta o erro de ReferenceError)
+function fecharModal() {
+    const modal = document.getElementById('modalInfo');
+    if (modal) modal.style.display = 'none';
+}
+
+// 7. PROCESSAMENTO DE EPIS (LÓGICA LOCAL)
 function processarEntregaExcel(valor) {
-    // 1. LÓGICA DE LIMPEZA (Se valor for "nao")
     if (valor === "nao") {
         for (let i = 0; i < 20; i++) {
-            const campos = [`dev-${i}`, `data-${i}`, `desc-${i}`, `qtd-${i}`, `fab-${i}`, `ca-${i}`, `val-${i}`];
-            campos.forEach(id => {
-                const el = document.getElementById(id);
+            ['dev-', 'data-', 'desc-', 'qtd-', 'fab-', 'ca-', 'val-'].forEach(prefix => {
+                const el = document.getElementById(prefix + i);
                 if (el) el.value = "";
             });
         }
         return;
     }
 
-    // 2. LÓGICA DE PREENCHIMENTO (Se valor for "inicial")
     if (valor === "inicial") {
         if (dadosPlanilha.length === 0) {
             alert("⚠️ Carregue a planilha Excel primeiro!");
             return;
         }
-
         const dataHoje = new Date().toLocaleDateString('pt-BR');
-        const formatarData = (v) => {
-            if (!v) return "";
-            if (typeof v === 'number') return new Date(Math.round((v - 25569) * 864e5)).toLocaleDateString('pt-BR');
-            return v;
-        };
-
         dadosPlanilha.forEach((linha, i) => {
             if (i < 20) {
-                const desc = linha['DESCRIÇÃO DO EPI'] || linha['DESCRIÇÃO'] || linha['ITEM'] || "";
+                const desc = linha['DESCRIÇÃO DO EPI'] || linha['DESCRIÇÃO'] || "";
                 if (desc) {
-                    // Preenche "INICIAL" na coluna devolução
-                    const dev = document.getElementById(`dev-${i}`);
-                    if (dev) dev.value = "INICIAL";
-
-                    const campoData = document.getElementById(`data-${i}`);
-                    if (campoData) campoData.value = formatarData(linha['DATA DE ENTREGA'] || linha['DATA']) || dataHoje;
-                    
-                    const campoDesc = document.getElementById(`desc-${i}`);
-                    if (campoDesc) campoDesc.value = desc;
-
-                    const campoQtd = document.getElementById(`qtd-${i}`);
-                    if (campoQtd) campoQtd.value = linha['QTD'] || linha['QUANTIDADE'] || "1";
-
-                    const campoFab = document.getElementById(`fab-${i}`);
-                    if (campoFab) campoFab.value = linha['FABRICANTE'] || "";
-
-                    const colCA = Object.keys(linha).find(k => k.toUpperCase().includes('C.A'));
-                    if (colCA) {
-                        const elCA = document.getElementById(`ca-${i}`);
-                        if (elCA) elCA.value = linha[colCA];
-                    }
-
-                    const colVal = Object.keys(linha).find(k => k.toUpperCase().includes('VAL'));
-                    if (colVal) {
-                        const elVal = document.getElementById(`val-${i}`);
-                        if (elVal) elVal.value = formatarData(linha[colVal]);
-                    }
+                    const setVal = (id, val) => { if(document.getElementById(id)) document.getElementById(id).value = val; };
+                    setVal(`dev-${i}`, "INICIAL");
+                    setVal(`data-${i}`, dataHoje);
+                    setVal(`desc-${i}`, desc);
+                    setVal(`qtd-${i}`, linha['QTD'] || "1");
+                    setVal(`ca-${i}`, linha['C.A'] || "");
                 }
             }
         });
     }
 }
 
-// 6. SINCRONIZAÇÃO DO MENU SUPERIOR
 function sincronizarMobile(elMobile) {
-    // Agora enviamos o valor direto para a função de processamento
     processarEntregaExcel(elMobile.value);
 }
 
-// 7. AJUSTE DE IMPRESSÃO
+// 8. IMPRESSÃO E OTIMIZAÇÃO
 window.onbeforeprint = () => {
-    const inputs = document.querySelectorAll('input, select');
-    inputs.forEach(el => {
+    document.querySelectorAll('input, select').forEach(el => {
         if (el.tagName === 'INPUT') el.setAttribute('value', el.value);
         if (el.tagName === 'SELECT') {
-            const selectedOption = el.options[el.selectedIndex];
-            if (selectedOption) {
-                for (let opt of el.options) opt.removeAttribute('selected');
-                selectedOption.setAttribute('selected', 'selected');
+            const selected = el.options[el.selectedIndex];
+            if (selected) {
+                Array.from(el.options).forEach(o => o.removeAttribute('selected'));
+                selected.setAttribute('selected', 'selected');
             }
         }
     });
 };
+
+// Esta função é o novo "porteiro" do modal
+function verificarEBuscar() {
+    // Pega o nome que o Excel já escreveu no campo da ficha
+    const nomeNaFicha = document.getElementById('c-nome').value;
+    const dataFim = document.getElementById('dataFim').value;
+
+    // Se o usuário tentar colocar data sem ter escolhido nome no select
+    if (!nomeNaFicha) {
+        alert("Por favor, selecione primeiro um colaborador no menu.");
+        document.getElementById('dataFim').value = ""; 
+        return;
+    }
+
+    // O Modal SÓ abre se a data final for preenchida
+    if (dataFim) {
+        buscarDadosNuvem(nomeNaFicha);
+    }
+}
+
+function validarDatasParaLiberar() {
+    const dataInicio = document.getElementById('dataInicio').value;
+    const dataFim = document.getElementById('dataFim').value;
+    const selectNome = document.getElementById('selectColaborador');
+
+    // Se ambas as datas estiverem preenchidas
+    if (dataInicio !== "" && dataFim !== "") {
+        selectNome.disabled = false;
+        selectNome.style.border = "2px solid #2e7d32"; // Fica verde para indicar que liberou
+        selectNome.options[0].text = "-- Colaborador --";
+    } else {
+        selectNome.disabled = true;
+        selectNome.style.border = "1px solid #ccc";
+        selectNome.options[0].text = "Selecione as datas primeiro...";
+        selectNome.value = ""; // Reseta a seleção se o usuário apagar uma data
+    }
+}
+
+
+function ajustarVisibilidadeImpressao() {
+    const modo = document.getElementById('modoImpressao').value;
+    // Seleciona TUDO que tem a classe para esconder
+    const elementos = document.querySelectorAll('.esconder-na-reimpressao');
+    
+    // Seleciona elementos específicos que não usam a classe (Logo, Foto, etc)
+    const fixos = [
+        document.querySelector('.logo-area'),
+        document.querySelector('.company-info'),
+        document.querySelector('.foto-area')
+    ];
+
+    const visibilidade = (modo === 'reimpressao') ? 'hidden' : 'visible';
+
+    // Aplica nos elementos com classe
+   elementos.forEach(el => {
+        el.style.visibility = (modo === 'reimpressao') ? 'hidden' : 'visible';
+    });
+
+    // Aplica nos elementos fixos do cabeçalho
+    fixos.forEach(el => {
+        if(el) el.style.visibility = visibilidade;
+    });
+}
+
+
+function otimizarMemoriaImpressao() {
+    document.querySelectorAll('input').forEach(input => {
+        input.style.outline = "none";
+        input.style.boxShadow = "none";
+    });
+}   
