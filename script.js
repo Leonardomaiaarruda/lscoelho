@@ -48,13 +48,11 @@ function carregarExcel(e) {
 // 4. PREENCHIMENTO AUTOMÁTICO E BUSCA NA NUVEM
 async function preencher() {
     const select = document.getElementById('selectColaborador');
-    if (select.disabled) return; // Não faz nada se estiver travado
+    if (select.disabled) return; 
 
     const idx = select.value;
     if (idx === "" || !dadosPlanilha[idx]) return;
 
-
-    // 2. Define a linha de dados atual
     const linha = dadosPlanilha[idx];
 
     // 3. Captura e tratamento de dados básicos
@@ -64,33 +62,44 @@ async function preencher() {
     const matri = linha['N° Folha'] || linha['Nº Folha'] || "";
     const ctps = linha['CTPS'] || linha['ctps'] || "";
     const ano = linha['ANO'] || linha['ano'] || "2026";
+    const setor = linha['SETOR'] || linha['setor'] || ""; // Captura o setor
     
     let adm = linha['DATA DE ADMISSÃO'] || linha['DATA DE ADMIMSSÃO'] || "";
     if(typeof adm === 'number') {
-        // Converte data serial do Excel para formato brasileiro
         adm = new Date(Math.round((adm - 25569) * 864e5)).toLocaleDateString('pt-BR');
     }
 
-    // 4. Função auxiliar para preencher inputs com segurança
     const setSafe = (id, val) => {
         const el = document.getElementById(id);
         if (el) el.value = val;
     };
 
-    // 5. Preenchimento dos campos duplicados (Ficha e Canhoto/Cópia)
-    const campos = ['nome', 'funcao', 'cpf', 'adm', 'matri', 'ano', 'ctps'];
-    const valores = [nome, funcao, cpf, adm, matri, ano, ctps];
+    // --- LOGICA DE MODO DE IMPRESSÃO ---
+    const modo = document.getElementById('modoImpressao').value;
+
+    // Adicionado 'setor' na lista para limpeza
+    const campos = ['nome', 'funcao', 'cpf', 'adm', 'matri', 'ano', 'ctps', 'setor'];
+    const valores = [nome, funcao, cpf, adm, matri, ano, ctps, setor];
 
     campos.forEach((campo, i) => {
+        // Preenche sempre a Ficha 1
         setSafe(`c-${campo}`, valores[i]);
-        setSafe(`c2-${campo}`, valores[i]);
+
+        // SÓ preenche a Ficha 2 se NÃO for reimpressão
+        if (modo !== 'reimpressao') {
+            setSafe(`c2-${campo}`, valores[i]);
+        } else {
+            setSafe(`c2-${campo}`, ""); // Limpa Nome, CPF e SETOR se for reimpressão
+        }
     });
 
-    // 6. Atualiza o nome na área de assinatura
+    // 6. Atualiza o nome na área de assinatura (Só mostra se não for reimpressão)
     const sig = document.getElementById('nome-assinatura');
-    if (sig) sig.innerText = nome;
+    if (sig) {
+        sig.innerText = (modo === 'reimpressao') ? "" : nome;
+    }
 
-    // 7. Lógica da Foto (Google Drive)
+    // 7. Lógica da Foto
     const img = document.getElementById('img-colab');
     const placeholder = document.getElementById('placeholder-foto');
     if (img) {
@@ -98,12 +107,13 @@ async function preencher() {
         const urlDireta = formatarLinkDrive(linkBruto);
         if (urlDireta) {
             img.src = urlDireta;
-            img.style.display = 'block';
+            img.style.display = (modo === 'reimpressao') ? 'none' : 'block';
             if (placeholder) placeholder.style.display = 'none';
         } else {
+            img.src = "";
             img.style.display = 'none';
             if (placeholder) {
-                placeholder.style.display = 'block';
+                placeholder.style.display = (modo === 'reimpressao') ? 'none' : 'block';
                 placeholder.innerText = "SEM FOTO";
             }
         }
@@ -114,19 +124,14 @@ async function preencher() {
     const inputFuncao2 = document.getElementById('c2-funcao');
     if (typeof aplicarCorCargo === "function") {
         aplicarCorCargo(inputFuncao1, funcao);
-        aplicarCorCargo(inputFuncao2, funcao);
+        if (modo !== 'reimpressao' && inputFuncao2) {
+            aplicarCorCargo(inputFuncao2, funcao);
+        }
     }
 
-    // 9. DISPARA A BUSCA NA NUVEM (EPIs Online)
-    // O nomeIdentificado garante que a busca use o nome exato da planilha local
-    const nomeIdentificado = nome; 
-    buscarDadosNuvem(nomeIdentificado);
-
-    // 10. Limpeza de memória para impressão
-    if (typeof otimizarMemoriaImpressao === "function") {
-        otimizarMemoriaImpressao();
-    }
-}   
+    // 9. Dispara busca na Nuvem
+    buscarDadosNuvem(nome);
+} 
 
 function aplicarCorCargo(elemento, cargo) {
     if (!elemento) return;
@@ -356,27 +361,25 @@ function validarDatasParaLiberar() {
 
 function ajustarVisibilidadeImpressao() {
     const modo = document.getElementById('modoImpressao').value;
-    // Seleciona TUDO que tem a classe para esconder
-    const elementos = document.querySelectorAll('.esconder-na-reimpressao');
-    
-    // Seleciona elementos específicos que não usam a classe (Logo, Foto, etc)
-    const fixos = [
-        document.querySelector('.logo-area'),
-        document.querySelector('.company-info'),
-        document.querySelector('.foto-area')
-    ];
+    const p1 = document.getElementById('pagina-1');
+    const p2 = document.getElementById('pagina-tabela');
 
-    const visibilidade = (modo === 'reimpressao') ? 'hidden' : 'visible';
-
-    // Aplica nos elementos com classe
-   elementos.forEach(el => {
-        el.style.visibility = (modo === 'reimpressao') ? 'hidden' : 'visible';
-    });
-
-    // Aplica nos elementos fixos do cabeçalho
-    fixos.forEach(el => {
-        if(el) el.style.visibility = visibilidade;
-    });
+    if (modo === 'reimpressao') {
+        // Remove a página 1 completamente para não gerar folha extra
+        if (p1) p1.style.display = 'none';
+        
+        // Ativa o modo transparente na página 2
+        if (p2) p2.classList.add('modo-fantasma');
+        
+        // Limpa os dados da planilha (incluindo Setor)
+        preencher(); 
+    } else {
+        // Restaura tudo para Ficha Nova
+        if (p1) p1.style.display = 'block';
+        if (p2) p2.classList.remove('modo-fantasma');
+        
+        preencher();
+    }
 }
 
 
