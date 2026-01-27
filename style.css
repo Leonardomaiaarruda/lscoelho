@@ -557,54 +557,57 @@ input {
 
 
 @media print {
-    /* 1. Esconde a Folha 1 e o Menu */
-    #pagina-1, .no-print { 
+    /* 1. Esconde absolutamente tudo que não deve ser impresso */
+    #pagina-1, .no-print, .modal-overlay { 
         display: none !important; 
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
     }
 
-    /* 2. Força Paisagem e remove margens do navegador */
-    @page { 
-        size: landscape; 
-        margin: 0; 
-    }
-
+    /* 2. Reseta o Body para não ter margens que empurrem o conteúdo */
     body { 
         background: white !important; 
         margin: 0 !important;
+        padding: 0 !important;
+        width: 297mm !important;
+        height: 209mm !important;
     }
 
-    /* 3. Ajuste da Folha 2 (Única a aparecer) */
+    @page { 
+        size: landscape; 
+        margin: 0; /* Remove margens do navegador (cabeçalho/rodapé) */
+    }
+
+    /* 3. Ajuste da Ficha 2 para ser a ÚNICA folha */
     #pagina-tabela {
         display: block !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
         width: 297mm !important;
         height: 209mm !important;
         margin: 0 !important;
-        padding: 5mm !important;
-        overflow: hidden !important; /* Corta sobras que geram 3ª folha */
+        padding: 5mm !important; /* Mantenha o padding interno */
+        overflow: hidden !important; /* Corta qualquer coisa que crie a 3ª folha */
         page-break-after: avoid !important;
         page-break-before: avoid !important;
+        border: none !important;
     }
 
-    /* 4. Remove o Logo Gigante (Marca d'água) na Reimpressão */
+    /* 4. Remove o Logo Gigante e Bordas na Reimpressão */
     .modo-fantasma .border-container::before {
         display: none !important;
         content: none !important;
         background: none !important;
     }
 
-    /* 5. Remove bordas e linhas se estiver em modo-fantasma */
-    .modo-fantasma, 
-    .modo-fantasma .border-container, 
-    .modo-fantasma .epi-table,
-    .modo-fantasma .epi-item,
-    .modo-fantasma .cell {
+    .modo-fantasma, .modo-fantasma .border-container, .modo-fantasma * {
         border-color: transparent !important;
         background-color: transparent !important;
         box-shadow: none !important;
     }
 }
-
-
 /* 1. Remove o Logo Gigante (Marca d'água) */
 .modo-fantasma .border-container::before {
     display: none !important;
