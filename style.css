@@ -41,6 +41,8 @@ body {
     }
     .page-break { margin-top: 0; }
     .no-print { display: none; }
+
+    
 }
 
 .border-container { 
@@ -431,59 +433,200 @@ input {
     }
 }
 
-/* --- CONFIGURAÇÃO DE IMPRESSÃO (Onde a mágica acontece) --- */
+
+
+/* MODO REIMPRESSÃO: Mantém o papel A4, mas limpa o desenho */
+.modo-fantasma {
+    background: white !important; /* Mantém o fundo da folha branco */
+    border: 1px dashed #ccc !important; /* Uma borda fina só para você ver o limite da folha na tela */
+}
+
+/* Esconde todas as bordas de tabelas, células e containers */
+.modo-fantasma, 
+.modo-fantasma .border-container, 
+.modo-fantasma .epi-table, 
+.modo-fantasma .epi-item, 
+.modo-fantasma .cell, 
+.modo-fantasma .data-grid,
+.modo-fantasma .header {
+    border: none !important;
+    border-color: transparent !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Esconde os textos fixos (Labels e Títulos) */
+.modo-fantasma .label, 
+.modo-fantasma .title-bar, 
+.modo-fantasma .epi-header, 
+.modo-fantasma .section-title,
+.modo-fantasma .company-info,
+.modo-fantasma .logo-area {
+    visibility: hidden !important;
+}
+
+/* Garante que o que foi digitado (DADOS) continue aparecendo no lugar certo */
+.modo-fantasma input {
+    visibility: visible !important;
+    color: black !important;
+    border: none !important;
+    background: transparent !important;
+    font-weight: bold;
+}
+
+/* Remove o cinza das linhas da tabela */
+.modo-fantasma .epi-item {
+    background: transparent !important;
+}
+
+.page-none{
+   visibility: visible;
+}
+
+.esconder-na-reimpressao{
+    visibility: visible;
+}
+
+
+
+/* Correção para visualização de impressão */
 @media print {
+    .no-print { display: none !important; }
     
-    /* Esconde avisos de mobile e controles */
-    .no-print, body::after { display: none !important; }
-     input {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }
-    
-    /* Força a ficha a aparecer PERFEITA no papel */
-    .page { 
-        display: block !important; 
+    body { background: white !important; }
+
+    /* Força a folha a manter o tamanho A4 no papel */
+    .page {
+        display: block !important;
+        visibility: visible !important;
         width: 297mm !important;
         height: 209mm !important;
         margin: 0 !important;
         padding: 5mm !important;
-        transform: none !important;
+        page-break-after: always !important;
+        overflow: hidden !important;
+    }
+
+    /* Se estiver em modo fantasma, remove o pontilhado da tela */
+    .modo-fantasma {
         border: none !important;
     }
 
-    body { background: white !important; }
+    /* Garante que a logo de fundo (marca d'água) suma na reimpressão se desejar */
+    .modo-fantasma.border-container::before {
+        display: none !important;
+    }
+}
 
+/* Garante que os inputs dentro de áreas 'hidden' apareçam */
+.modo-fantasma input, 
+.modo-fantasma .page-none input {
+    visibility: visible !important;
+    display: block !important;
+    opacity: 1 !important;
+}
+
+
+@media print {
+    /* Mantém a página 2 com tamanho A4 mesmo vazia */
+    #pagina-tabela {
+        display: block !important;
+        width: 297mm !important;
+        height: 209mm !important;
+    }
+
+    /* Se for modo fantasma, apaga as linhas */
+    .modo-fantasma, .modo-fantasma .border-container, .modo-fantasma * {
+        border-color: transparent !important;
+        background-color: transparent !important;
+    }
+}
+
+/* Remove a logomarca de fundo (marca d'água) na reimpressão */
+.modo-fantasma .border-container::before {
+    display: none !important;
+    background-image: none !important;
+    content: none !important;
+}
+
+/* Garante que qualquer outra imagem de fundo também suma */
+.modo-fantasma .border-container {
+    background-image: none !important;
+}
+
+
+
+@media print {
+    /* 1. Esconde a Folha 1 e o Menu */
+    #pagina-1, .no-print { 
+        display: none !important; 
+    }
+
+    /* 2. Força Paisagem e remove margens do navegador */
     @page { 
         size: landscape; 
         margin: 0; 
     }
 
- /* Esta classe fará qualquer texto, título ou cabeçalho sumir no papel */
-    .print-hidden, .esconder-na-reimpressao {
-        visibility: hidden !important;
+    body { 
+        background: white !important; 
+        margin: 0 !important;
     }
 
-    /* Remove bordas de todos os campos que não serão impressos para evitar marcas no papel */
-    .esconder-na-reimpressao input, .esconder-na-reimpressao div {
-        border: none !important;
+    /* 3. Ajuste da Folha 2 (Única a aparecer) */
+    #pagina-tabela {
+        display: block !important;
+        width: 297mm !important;
+        height: 209mm !important;
+        margin: 0 !important;
+        padding: 5mm !important;
+        overflow: hidden !important; /* Corta sobras que geram 3ª folha */
+        page-break-after: avoid !important;
+        page-break-before: avoid !important;
     }
 
-    /* Garante que o menu do topo nunca saia na impressão */
-    .no-print {
+    /* 4. Remove o Logo Gigante (Marca d'água) na Reimpressão */
+    .modo-fantasma .border-container::before {
         display: none !important;
+        content: none !important;
+        background: none !important;
     }
 
-    /* Força tudo que deve sumir a ficar invisível mas mantendo o lugar */
-    .esconder-na-reimpressao, 
-    .esconder-na-reimpressao * {
-        visibility: hidden !important;
-    }
-
-    /* Garante que os inputs de dados fiquem visíveis (caso estejam dentro de um container hidden) */
-    .epi-item input {
-        visibility: visible !important;
-        border: none !important;
+    /* 5. Remove bordas e linhas se estiver em modo-fantasma */
+    .modo-fantasma, 
+    .modo-fantasma .border-container, 
+    .modo-fantasma .epi-table,
+    .modo-fantasma .epi-item,
+    .modo-fantasma .cell {
+        border-color: transparent !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
     }
 }
 
+
+/* 1. Remove o Logo Gigante (Marca d'água) */
+.modo-fantasma .border-container::before {
+    display: none !important;
+    content: none !important;
+    background-image: none !important;
+}
+
+/* 2. Remove o Logo da Logo-Area (se houver um <img> ou background) */
+.modo-fantasma .logo-area, 
+.modo-fantasma .logo-area img {
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
+/* 3. Garante que qualquer borda ou linha de input suma */
+.modo-fantasma input {
+    border: none !important;
+    background: transparent !important;
+    outline: none !important;
+}
+
+/* 4. Remove a logo de fundo do container principal */
+.modo-fantasma .border-container {
+    background-image: none !important;
+}
