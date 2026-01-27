@@ -365,23 +365,16 @@ function ajustarVisibilidadeImpressao() {
     const p2 = document.getElementById('pagina-tabela');
 
     if (modo === 'reimpressao') {
-        // Remove a página 1 completamente para não gerar folha extra
         if (p1) p1.style.display = 'none';
-        
-        // Ativa o modo transparente na página 2
         if (p2) p2.classList.add('modo-fantasma');
-        
-        // Limpa os dados da planilha (incluindo Setor)
-        preencher(); 
     } else {
-        // Restaura tudo para Ficha Nova
         if (p1) p1.style.display = 'block';
         if (p2) p2.classList.remove('modo-fantasma');
-        
-        preencher();
     }
-}
 
+    // Chama a função preencher para limpar os values (Setor, Nome, etc)
+    preencher(); 
+}
 
 function otimizarMemoriaImpressao() {
     document.querySelectorAll('input').forEach(input => {
