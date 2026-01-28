@@ -371,8 +371,8 @@ function ajustarVisibilidadeImpressao() {
         if (p1) p1.style.display = 'block';
         if (p2) p2.classList.remove('modo-fantasma');
     }
-
-    // Chama a função preencher para limpar os values (Setor, Nome, etc)
+    
+    // Força a atualização dos dados e da tabela de EPIs
     preencher(); 
 }
 
