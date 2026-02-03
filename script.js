@@ -332,9 +332,9 @@ function processarEntregaExcel(valor) {
                     const descUpper = desc.toString().toUpperCase();
                     
                     if (descUpper.includes("CAMISA")) {
-                        qtdDefinida = "2";
-                    } else if (descUpper.includes("CALÇA")) {
                         qtdDefinida = "3";
+                    } else if (descUpper.includes("CALÇA")) {
+                        qtdDefinida = "2";
                     }
 
                     if(val && typeof val === 'number') {
