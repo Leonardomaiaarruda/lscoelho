@@ -180,7 +180,7 @@ async function buscarDadosNuvem(nomeBusca) {
     
     const corpo = document.getElementById('modal-body');
     modal.style.display = 'flex';
-    corpo.innerHTML = "⌛ Sincronizando dados e calculando linhas...";
+    corpo.innerHTML = "⌛ Sincronizando dados e calculando ordem cronológica...";
 
     const formatarDataExcel = (valor) => {
         if (!valor) return "";
@@ -206,15 +206,23 @@ async function buscarDadosNuvem(nomeBusca) {
         const dFim = document.getElementById('dataFim').value;
         const pular = parseInt(document.getElementById('pularLinhas').value) || 0;
 
-        const filtrados = dadosNuvem.filter(linha => {
+        // 1. FILTRAGEM
+        let filtrados = dadosNuvem.filter(linha => {
             const f = linha.funcionario || linha.Funcionario || Object.values(linha)[0];
             const dRaw = linha.dataPedido || linha.DATA || Object.values(linha)[2];
             const dISO = dRaw ? dRaw.toString().split('T')[0] : "";
             return limpar(f) === nomeAlvo && (!dInicio || dISO >= dInicio) && (!dFim || dISO <= dFim);
         });
 
-        // --- CORREÇÃO: Limpa TODAS as colunas, incluindo 'qtd-', antes de preencher ---
-        for (let i = 0; i < 20; i++) {
+        // 2. ORDENAÇÃO (MENOR PARA O MAIOR) - NOVO
+        filtrados.sort((a, b) => {
+            const dataA = new Date(a.dataPedido || a.DATA || Object.values(a)[2]);
+            const dataB = new Date(b.dataPedido || b.DATA || Object.values(b)[2]);
+            return dataA - dataB;
+        });
+
+        // --- Limpa as 21 colunas antes de preencher ---
+        for (let i = 0; i < 21; i++) {
             ['data-', 'desc-', 'fab-', 'ca-', 'val-', 'dev-', 'qtd-'].forEach(p => { 
                 const el = document.getElementById(p + i);
                 if (el) el.value = ""; 
@@ -225,7 +233,7 @@ async function buscarDadosNuvem(nomeBusca) {
             filtrados.forEach((reg, index) => {
                 const linhaAlvo = index + pular;
 
-                if (linhaAlvo < 20) {
+                if (linhaAlvo < 21) { // Limite atualizado para 21 linhas
                     const colNuvem = Object.values(reg);
                     const epiNuvem = (reg.epi || colNuvem[1] || "").toString().toUpperCase().trim();
                     const epiBusca = limpar(epiNuvem);
@@ -242,11 +250,10 @@ async function buscarDadosNuvem(nomeBusca) {
                         if(el) el.value = v; 
                     };
                     
-                    // PREENCHIMENTO DOS DADOS
                     setV('data-', formatarDataExcel(reg.dataPedido || colNuvem[2]));
                     setV('desc-', epiNuvem);
                     setV('dev-', "NÃO");
-                    setV('qtd-', "1"); // Preenche apenas nas linhas que contêm dados
+                    setV('qtd-', "1");
 
                     if (infoLocal) {
                         Object.keys(infoLocal).forEach(key => {
@@ -264,11 +271,10 @@ async function buscarDadosNuvem(nomeBusca) {
                 }
             });
 
-            // --- GARANTIR O SETOR CARPINTARIA SE ESTIVER VAZIO ---
             const cSetor = document.getElementById('c-setor');
             if (cSetor && !cSetor.value) cSetor.value = "CARPINTARIA";
 
-            corpo.innerHTML = `✅ Ficha preenchida (${filtrados.length} itens)!`;
+            corpo.innerHTML = `✅ Ficha preenchida e ordenada (${filtrados.length} itens)!`;
             setTimeout(() => modal.style.display='none', 1000);
         } else {
             corpo.innerHTML = "Nenhum dado encontrado para este período.";
@@ -427,6 +433,13 @@ function ajustarVisibilidadeImpressao() {
 
     // 2. Controla a visibilidade das páginas
     if (modo === 'reimpressao') {
+        const s2 = document.getElementById('c2-setor');
+        if (s2) {
+            s2.value = ""; // Limpa o texto
+            s2.style.backgroundColor = "transparent"; // Remove a cor
+            s2.style.color = "transparent"; // Esconde qualquer resíduo de texto
+        }
+        
         if (p1) p1.style.display = 'none'; // Esconde a folha de dados (Pag 1)
         if (p2) {
             p2.style.display = 'block';
