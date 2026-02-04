@@ -620,12 +620,100 @@ input {
 
     /* 6. Modo Reimpressão */
     .reimpressao-ativa #pagina-1 { display: none !important; }
+    
+    .modo-fantasma .epi-table {
+        margin-top: 2mm; /* Ajuste milimetricamente aqui se houver desalinhamento */
+    }
 }
 
 /* Ajuste visual no ecrã para o campo Setor */
 #c-setor, #c2-setor {
-    background-color: black !important;
     color: white !important;
     text-align: center;
     font-weight: bold;
+}
+
+
+/* No seu style.css */
+
+/* Quando a reimpressão está ativa, escondemos o fundo e bordas na marra */
+.modo-fantasma .border-container,
+.modo-fantasma .epi-table,
+.modo-fantasma .epi-item,
+.modo-fantasma .cell {
+    border: none !important;
+    background-color: transparent !important;
+}
+
+/* Esconde textos fixos, mas mantém os INPUTS visíveis */
+.modo-fantasma .label,
+.modo-fantasma .title-bar,
+.modo-fantasma .epi-header,
+.modo-fantasma .section-title,
+.modo-fantasma .company-info,
+.modo-fantasma .logo-area {
+    visibility: hidden !important;
+}
+
+/* Remove a marca d'água na reimpressão */
+.modo-fantasma .border-container::before {
+    display: none !important;
+    content: none !important;
+}
+
+/* Garante que o texto do input seja preto e nítido no papel */
+.modo-fantasma input {
+    visibility: visible !important;
+    color: black !important;
+    background: transparent !important;
+}
+
+
+
+/* ============================================================
+   ESTILOS PARA REIMPRESSÃO (MODO FANTASMA)
+   ============================================================ */
+
+/* Quando a classe .modo-fantasma é ativada pelo JS */
+.modo-fantasma {
+    background: none !important;
+}
+
+/* 1. Esconde bordas de containers e tabelas */
+.modo-fantasma .border-container,
+.modo-fantasma .epi-table,
+.modo-fantasma .epi-item,
+.modo-fantasma .cell,
+.modo-fantasma .header,
+.modo-fantasma .logo-area,
+.modo-fantasma .company-info {
+    border: none !important;
+    background: none !important;
+}
+
+/* 2. Torna textos fixos, logos e marca d'água invisíveis */
+.modo-fantasma .title-bar,
+.modo-fantasma .label,
+.modo-fantasma .section-title,
+.modo-fantasma img,
+.modo-fantasma .watermark,
+.modo-fantasma .border-container::before {
+    visibility: hidden !important;
+}
+
+/* 3. Garante que APENAS o conteúdo dos inputs apareça */
+.modo-fantasma input {
+    visibility: visible !important;
+    border: none !important;
+    background: transparent !important;
+    color: black !important;
+    font-weight: bold; /* Melhora a nitidez na impressão */
+}
+
+/* 4. Remove o fundo colorido dos cabeçalhos na reimpressão */
+.modo-fantasma #c2-setor, 
+.modo-fantasma #c2-nome, 
+.modo-fantasma #c2-funcao {
+    background-color: transparent !important;
+    color: transparent !important; /* Esconde o texto para não sobrepor o original */
 }
