@@ -72,8 +72,16 @@ async function preencher() {
     const setor = linha['SETOR'] || linha['setor'] || "CARPINTARIA"; // Valor padrão
     
     let adm = linha['DATA DE ADMISSÃO'] || linha['DATA DE ADMIMSSÃO'] || "";
-    if(typeof adm === 'number') {
-        adm = new Date(Math.round((adm - 25569) * 864e5)).toLocaleDateString('pt-BR');
+        if (typeof adm === 'number') {
+            // Converte o número do Excel para data ignorando fuso horário
+            let date = new Date(0);
+            date.setUTCFullYear(1900, 0, adm - 1);
+            
+            // Formata manualmente para DD/MM/AAAA
+            const dia = String(date.getUTCDate()).padStart(2, '0');
+            const mes = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const ano = date.getUTCFullYear();
+            adm = `${dia}/${mes}/${ano}`;
     }
 
     const setSafe = (id, val) => {
@@ -182,16 +190,26 @@ async function buscarDadosNuvem(nomeBusca) {
     modal.style.display = 'flex';
     corpo.innerHTML = "⌛ Sincronizando dados e calculando ordem cronológica...";
 
-    const formatarDataExcel = (valor) => {
+   const formatarDataExcel = (valor) => {
         if (!valor) return "";
-        if (!isNaN(valor) && typeof valor === 'number') {
-            const data = new Date(Math.round((valor - 25569) * 864e5));
-            data.setMinutes(data.getMinutes() + data.getTimezoneOffset());
-            return data.toLocaleDateString('pt-BR');
+        
+        if (typeof valor === 'number') {
+            // Lógica para números seriais do Excel
+            let date = new Date(0);
+            date.setUTCFullYear(1900, 0, valor - 1);
+            
+            const dia = String(date.getUTCDate()).padStart(2, '0');
+            const mes = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const ano = date.getUTCFullYear();
+            return `${dia}/${mes}/${ano}`;
         }
+        
         if (typeof valor === 'string' && valor.includes('-')) {
+            // Lógica para strings ISO da Nuvem (AAAA-MM-DD)
             const partes = valor.split('T')[0].split('-');
-            if (partes.length === 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
+            if (partes.length === 3) {
+                return `${partes[2]}/${partes[1]}/${partes[0]}`;
+            }
         }
         return valor;
     };
@@ -204,28 +222,9 @@ async function buscarDadosNuvem(nomeBusca) {
         const nomeAlvo = limpar(nomeBusca);
         const dInicio = document.getElementById('dataInicio').value;
         const dFim = document.getElementById('dataFim').value;
-        const modo = document.getElementById('modoImpressao').value;
-        const inputPulo = document.getElementById('pularLinhas');
+        const pular = parseInt(document.getElementById('pularLinhas').value) || 0;
 
-        // --- CÁLCULO DE PULO AUTOMÁTICO (SUGESTÃO) ---
-        // Se o input estiver em ZERO e for Reimpressão, ele tenta sugerir. 
-        // Se você já digitou um número (ex: 5), ele respeita o seu número.
-        if (modo === 'reimpressao' && (parseInt(inputPulo.value) === 0 || !inputPulo.value)) {
-            const itensAnteriores = dadosNuvem.filter(linha => {
-                const f = linha.funcionario || linha.Funcionario || Object.values(linha)[0];
-                const dRaw = linha.dataPedido || linha.DATA || Object.values(linha)[2];
-                const dISO = dRaw ? dRaw.toString().split('T')[0] : "";
-                return limpar(f) === nomeAlvo && (dInicio && dISO < dInicio);
-            });
-            inputPulo.value = Math.min(itensAnteriores.length, 19);
-        } else if (modo === 'normal') {
-            inputPulo.value = 0;
-        }
-
-        // Agora pegamos o valor final que está no campo (seja automático ou digitado por você)
-        const pular = parseInt(inputPulo.value) || 0;
-
-        // 1. FILTRAGEM DOS DADOS QUE VÃO PARA A TABELA
+        // 1. FILTRAGEM
         let filtrados = dadosNuvem.filter(linha => {
             const f = linha.funcionario || linha.Funcionario || Object.values(linha)[0];
             const dRaw = linha.dataPedido || linha.DATA || Object.values(linha)[2];
@@ -233,14 +232,14 @@ async function buscarDadosNuvem(nomeBusca) {
             return limpar(f) === nomeAlvo && (!dInicio || dISO >= dInicio) && (!dFim || dISO <= dFim);
         });
 
-        // 2. ORDENAÇÃO
+        // 2. ORDENAÇÃO (MENOR PARA O MAIOR) - NOVO
         filtrados.sort((a, b) => {
             const dataA = new Date(a.dataPedido || a.DATA || Object.values(a)[2]);
             const dataB = new Date(b.dataPedido || b.DATA || Object.values(b)[2]);
             return dataA - dataB;
         });
 
-        // --- LIMPEZA COMPLETA ANTES DE PREENCHER ---
+        // --- Limpa as 21 colunas antes de preencher ---
         for (let i = 0; i < 21; i++) {
             ['data-', 'desc-', 'fab-', 'ca-', 'val-', 'dev-', 'qtd-'].forEach(p => { 
                 const el = document.getElementById(p + i);
@@ -248,22 +247,21 @@ async function buscarDadosNuvem(nomeBusca) {
             });
         }
 
-        // 3. PREENCHIMENTO RESPEITANDO O PULO
         if (filtrados.length > 0) {
             filtrados.forEach((reg, index) => {
                 const linhaAlvo = index + pular;
 
-                if (linhaAlvo < 21) { 
+                if (linhaAlvo < 21) { // Limite atualizado para 21 linhas
                     const colNuvem = Object.values(reg);
                     const epiNuvem = (reg.epi || colNuvem[1] || "").toString().toUpperCase().trim();
                     const epiBusca = limpar(epiNuvem);
 
-                    const infoLocal = (typeof dadosPlanilha !== 'undefined') ? dadosPlanilha.find(item => {
+                    const infoLocal = dadosPlanilha.find(item => {
                         return Object.keys(item).some(key => {
                             const k = limpar(key);
                             return (k.includes("EPI") || k.includes("PRODUTO") || k.includes("DESC")) && limpar(item[key]) === epiBusca;
                         });
-                    }) : null;
+                    });
 
                     const setV = (p, v) => { 
                         const el = document.getElementById(p + linhaAlvo); 
@@ -291,8 +289,11 @@ async function buscarDadosNuvem(nomeBusca) {
                 }
             });
 
-            corpo.innerHTML = `✅ Pronto! Começando na linha ${pular}.`;
-            setTimeout(() => modal.style.display='none', 1200);
+            const cSetor = document.getElementById('c-setor');
+            if (cSetor && !cSetor.value) cSetor.value = "CARPINTARIA";
+
+            corpo.innerHTML = `✅ Ficha preenchida e ordenada (${filtrados.length} itens)!`;
+            setTimeout(() => modal.style.display='none', 1000);
         } else {
             corpo.innerHTML = "Nenhum dado encontrado para este período.";
             setTimeout(() => modal.style.display='none', 2000);
@@ -438,31 +439,37 @@ function validarDatasParaLiberar() {
 }
 
 
-// Melhoria na função de visibilidade para garantir o "Modo Fantasma"
 function ajustarVisibilidadeImpressao() {
     const modo = document.getElementById('modoImpressao').value;
     const p1 = document.getElementById('pagina-1');
     const p2 = document.getElementById('pagina-tabela');
 
+    // 1. Sincroniza o que foi digitado/preenchido para aparecer no papel
+    document.querySelectorAll('input').forEach(input => {
+        input.setAttribute('value', input.value);
+    });
+
+    // 2. Controla a visibilidade das páginas
     if (modo === 'reimpressao') {
-        // 1. Esconde a primeira página (Termos e Fotos)
-        if (p1) p1.style.display = 'none'; 
-        
-        // 2. Ativa a classe fantasma na página da tabela
-        if (p2) {
-            p2.style.display = 'block';
-            p2.classList.add('modo-fantasma'); 
+        const s2 = document.getElementById('c2-setor');
+        if (s2) {
+            s2.value = ""; // Limpa o texto
+            s2.style.backgroundColor = "transparent"; // Remove a cor
+            s2.style.color = "transparent"; // Esconde qualquer resíduo de texto
         }
         
-        // 3. Adiciona uma classe ao body para o CSS de impressão saber que é reimpressão
-        document.body.classList.add('reimpressao-ativa');
+        if (p1) p1.style.display = 'none'; // Esconde a folha de dados (Pag 1)
+        if (p2) {
+            p2.style.display = 'block';
+            p2.classList.add('modo-fantasma'); // Deixa só os textos na Pag 2
+        }
     } else {
+        // MODO FICHA NOVA: Garante que as duas apareçam
         if (p1) p1.style.display = 'block';
         if (p2) {
             p2.style.display = 'block';
             p2.classList.remove('modo-fantasma');
         }
-        document.body.classList.remove('reimpressao-ativa');
     }
 }
 
