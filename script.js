@@ -65,9 +65,11 @@ function formatarLinkDrive(link) {
     link = link.toString().trim();
     const regExp = /(?:id=|\/d\/)([\w-]+)/;
     const matches = link.match(regExp);
+    
     if (matches && matches[1]) {
-        // Corrigido: Adicionado o $ para a variável matches[1]
-        return `https://lh3.googleusercontent.com/u/0/d/${matches[1]}`;
+        // O parâmetro 'sz=w200' força o Google a entregar uma imagem de apenas alguns KB
+        // Isso reduz o tempo de processamento do PDF drasticamente
+        return `https://drive.google.com/thumbnail?id=${matches[1]}&sz=w200`;
     }
     return link; 
 }
@@ -235,20 +237,18 @@ async function buscarDadosNuvem(nomeBusca) {
     modal.style.display = 'flex';
     corpo.innerHTML = "⌛ Sincronizando dados e calculando ordem cronológica...";
 
-    // Função interna de formatação com proteção contra NaN
+    // FUNÇÃO DE DATA ATUALIZADA: Aceita "xxxxx" e corrige o fuso horário
     function formatarDataExcel(valor) {
         if (!valor || valor === "NaN" || valor === "undefined") return "";
         
         let data;
-        // Tenta converter se for número (data do Excel)
         if (typeof valor === 'number' && !isNaN(valor)) {
             data = new Date(Math.round((valor - 25569) * 864e5));
         } else {
-            // Se for string, tenta ver se é uma data válida
             data = new Date(valor);
         }
 
-        // Se for uma data válida, formata bonitinho
+        // Se for uma data válida, formata PT-BR com ajuste de fuso
         if (!isNaN(data.getTime())) {
             data.setMinutes(data.getMinutes() + data.getTimezoneOffset());
             const dia = String(data.getDate()).padStart(2, '0');
@@ -257,8 +257,8 @@ async function buscarDadosNuvem(nomeBusca) {
             return `${dia}/${mes}/${ano}`;
         }
 
-        // SE NÃO FOR DATA (Ex: "xxxxx", "N/A", "VERIFICAR"), retorna o texto original
-        return valor; 
+        // Se for texto (ex: "xxxxx"), retorna o texto original
+        return valor;
     }
 
     try {
@@ -272,7 +272,6 @@ async function buscarDadosNuvem(nomeBusca) {
         const modo = document.getElementById('modoImpressao').value;
         const inputPulo = document.getElementById('pularLinhas');
 
-        // Cálculo de pulo automático
         if (modo === 'reimpressao' && (parseInt(inputPulo.value) === 0 || !inputPulo.value)) {
             const itensAnteriores = dadosNuvem.filter(linha => {
                 const f = linha.funcionario || linha.Funcionario || Object.values(linha)[0];
@@ -287,7 +286,6 @@ async function buscarDadosNuvem(nomeBusca) {
 
         const pular = parseInt(inputPulo.value) || 0;
 
-        // 1. Filtragem e 2. Ordenação
         let filtrados = dadosNuvem.filter(linha => {
             const f = linha.funcionario || linha.Funcionario || Object.values(linha)[0];
             const dRaw = linha.dataPedido || linha.DATA || Object.values(linha)[2];
@@ -301,7 +299,7 @@ async function buscarDadosNuvem(nomeBusca) {
             return dataA - dataB;
         });
 
-        // Limpeza dos campos da tabela (20 linhas)
+        // Limpeza total antes de preencher
         for (let i = 0; i < 21; i++) {
             ['data-', 'desc-', 'fab-', 'ca-', 'val-', 'dev-', 'qtd-'].forEach(p => { 
                 const el = document.getElementById(p + i);
@@ -309,7 +307,6 @@ async function buscarDadosNuvem(nomeBusca) {
             });
         }
 
-        // 3. Preenchimento
         if (filtrados.length > 0) {
             filtrados.forEach((reg, index) => {
                 const linhaAlvo = index + pular;
@@ -318,7 +315,6 @@ async function buscarDadosNuvem(nomeBusca) {
                     const epiNuvem = (reg.epi || colNuvem[1] || "").toString().toUpperCase().trim();
                     const epiBusca = limpar(epiNuvem);
 
-                    // Busca do EPI na planilha local
                     const infoLocal = (typeof dadosPlanilha !== 'undefined') ? dadosPlanilha.find(item => {
                         return Object.keys(item).some(key => {
                             const k = limpar(key);
@@ -340,24 +336,15 @@ async function buscarDadosNuvem(nomeBusca) {
                         Object.keys(infoLocal).forEach(key => {
                             const k = limpar(key);
                             let val = infoLocal[key];
-                            
-                            // BUSCA AGRESSIVA: Se a coluna local contiver "VALIDADE", "CA" ou "FABRICANTE"
-                            if (k.includes("VALIDADE")) {
-                                setV('val-', formatarDataExcel(val));
-                            }
-                            if (k === "CA" || k === "C.A" || (k.includes("CA") && !k.includes("VALIDADE"))) {
-                                setV('ca-', val || "");
-                            }
-                            if (k.includes("FABRICANTE")) {
-                                setV('fab-', val || "COELHO");
-                            }
+                            if (k.includes("VALIDADE")) setV('val-', formatarDataExcel(val));
+                            if (k === "CA" || k === "C.A" || (k.includes("CA") && !k.includes("VALIDADE"))) setV('ca-', val || "");
+                            if (k.includes("FABRICANTE")) setV('fab-', val || "COELHO");
                         });
                     } else {
                         setV('fab-', "NÃO");
                     }
                 }
             });
-
             corpo.innerHTML = `✅ Pronto! Começando na linha ${pular}.`;
             setTimeout(() => modal.style.display='none', 1200);
         } else {
@@ -541,28 +528,21 @@ function imprimir() {
 
 
 function imprimirFicha() {
-    // 1. Pega o nome do colaborador selecionado
-    const select = document.getElementById('selectColaborador');
-    const nomeColaborador = select.options[select.selectedIndex].text;
+    const btn = event.target;
+    if(btn) btn.disabled = true;
 
-    // 2. Define o título da página com o nome dele
-    // Isso fará com que o PDF sugira: "FICHA_EPI_JOAO_SILVA.pdf"
-    if (nomeColaborador && nomeColaborador !== "-- Colaborador --") {
-        document.title = "FICHA_EPI_" + nomeColaborador.toUpperCase().replace(/\s+/g, '_');
-    } else {
-        document.title = "FICHA_EPI_COELHO_EMPREITEIRA";
-    }
-
-    // 3. Aplica as regras de visibilidade que já configuramos
+    // 1. Prepara a visibilidade
     ajustarVisibilidadeImpressao();
 
-    // 4. Abre a tela de impressão
-    window.print();
-
-    // 5. Opcional: Volta o título original após imprimir
+    // 2. Aguarda um pouco mais para o cache de imagem estabilizar
+    // Este pequeno fôlego de 500ms costuma "destravar" o diálogo de impressão do Chrome
     setTimeout(() => {
-        document.title = "Ficha EPI - Coelho Empreiteira";
-    }, 1000);
+        window.print();
+        
+        if(btn) {
+            setTimeout(() => { btn.disabled = false; }, 1000);
+        }
+    }, 500);
 }
 
 
