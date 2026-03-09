@@ -235,26 +235,30 @@ async function buscarDadosNuvem(nomeBusca) {
     modal.style.display = 'flex';
     corpo.innerHTML = "⌛ Sincronizando dados e calculando ordem cronológica...";
 
-   function formatarDataExcel(valor) {
-        if (!valor) return "";
+    // Função interna de formatação com proteção contra NaN
+    function formatarDataExcel(valor) {
+        if (!valor || valor === "NaN" || valor === "undefined") return "";
         
         let data;
-        // Se o valor for um número serial do Excel
-        if (typeof valor === 'number') {
-            data = new Date((valor - 25569) * 86400 * 1000);
+        // Tenta converter se for número (data do Excel)
+        if (typeof valor === 'number' && !isNaN(valor)) {
+            data = new Date(Math.round((valor - 25569) * 864e5));
         } else {
+            // Se for string, tenta ver se é uma data válida
             data = new Date(valor);
         }
 
-        // AJUSTE DE FUSO HORÁRIO:
-        // Adicionamos as horas do fuso para evitar que o dia retroceda
-        data.setMinutes(data.getMinutes() + data.getTimezoneOffset());
+        // Se for uma data válida, formata bonitinho
+        if (!isNaN(data.getTime())) {
+            data.setMinutes(data.getMinutes() + data.getTimezoneOffset());
+            const dia = String(data.getDate()).padStart(2, '0');
+            const mes = String(data.getMonth() + 1).padStart(2, '0');
+            const ano = data.getFullYear();
+            return `${dia}/${mes}/${ano}`;
+        }
 
-        const dia = String(data.getDate()).padStart(2, '0');
-        const mes = String(data.getMonth() + 1).padStart(2, '0');
-        const ano = data.getFullYear();
-
-        return `${dia}/${mes}/${ano}`;
+        // SE NÃO FOR DATA (Ex: "xxxxx", "N/A", "VERIFICAR"), retorna o texto original
+        return valor; 
     }
 
     try {
@@ -268,9 +272,7 @@ async function buscarDadosNuvem(nomeBusca) {
         const modo = document.getElementById('modoImpressao').value;
         const inputPulo = document.getElementById('pularLinhas');
 
-        // --- CÁLCULO DE PULO AUTOMÁTICO (SUGESTÃO) ---
-        // Se o input estiver em ZERO e for Reimpressão, ele tenta sugerir. 
-        // Se você já digitou um número (ex: 5), ele respeita o seu número.
+        // Cálculo de pulo automático
         if (modo === 'reimpressao' && (parseInt(inputPulo.value) === 0 || !inputPulo.value)) {
             const itensAnteriores = dadosNuvem.filter(linha => {
                 const f = linha.funcionario || linha.Funcionario || Object.values(linha)[0];
@@ -283,10 +285,9 @@ async function buscarDadosNuvem(nomeBusca) {
             inputPulo.value = 0;
         }
 
-        // Agora pegamos o valor final que está no campo (seja automático ou digitado por você)
         const pular = parseInt(inputPulo.value) || 0;
 
-        // 1. FILTRAGEM DOS DADOS QUE VÃO PARA A TABELA
+        // 1. Filtragem e 2. Ordenação
         let filtrados = dadosNuvem.filter(linha => {
             const f = linha.funcionario || linha.Funcionario || Object.values(linha)[0];
             const dRaw = linha.dataPedido || linha.DATA || Object.values(linha)[2];
@@ -294,14 +295,13 @@ async function buscarDadosNuvem(nomeBusca) {
             return limpar(f) === nomeAlvo && (!dInicio || dISO >= dInicio) && (!dFim || dISO <= dFim);
         });
 
-        // 2. ORDENAÇÃO
         filtrados.sort((a, b) => {
             const dataA = new Date(a.dataPedido || a.DATA || Object.values(a)[2]);
             const dataB = new Date(b.dataPedido || b.DATA || Object.values(b)[2]);
             return dataA - dataB;
         });
 
-        // --- LIMPEZA COMPLETA ANTES DE PREENCHER ---
+        // Limpeza dos campos da tabela (20 linhas)
         for (let i = 0; i < 21; i++) {
             ['data-', 'desc-', 'fab-', 'ca-', 'val-', 'dev-', 'qtd-'].forEach(p => { 
                 const el = document.getElementById(p + i);
@@ -309,16 +309,16 @@ async function buscarDadosNuvem(nomeBusca) {
             });
         }
 
-        // 3. PREENCHIMENTO RESPEITANDO O PULO
+        // 3. Preenchimento
         if (filtrados.length > 0) {
             filtrados.forEach((reg, index) => {
                 const linhaAlvo = index + pular;
-
                 if (linhaAlvo < 21) { 
                     const colNuvem = Object.values(reg);
                     const epiNuvem = (reg.epi || colNuvem[1] || "").toString().toUpperCase().trim();
                     const epiBusca = limpar(epiNuvem);
 
+                    // Busca do EPI na planilha local
                     const infoLocal = (typeof dadosPlanilha !== 'undefined') ? dadosPlanilha.find(item => {
                         return Object.keys(item).some(key => {
                             const k = limpar(key);
@@ -340,10 +340,16 @@ async function buscarDadosNuvem(nomeBusca) {
                         Object.keys(infoLocal).forEach(key => {
                             const k = limpar(key);
                             let val = infoLocal[key];
-                            if (k === "FABRICANTE") setV('fab-', val || "NÃO");
-                            if (k === "CA" || k === "C.A") setV('ca-', val || "");
-                            if (k.includes("VALIDADE") && (k.includes("C.A") || k.includes("CA"))) {
+                            
+                            // BUSCA AGRESSIVA: Se a coluna local contiver "VALIDADE", "CA" ou "FABRICANTE"
+                            if (k.includes("VALIDADE")) {
                                 setV('val-', formatarDataExcel(val));
+                            }
+                            if (k === "CA" || k === "C.A" || (k.includes("CA") && !k.includes("VALIDADE"))) {
+                                setV('ca-', val || "");
+                            }
+                            if (k.includes("FABRICANTE")) {
+                                setV('fab-', val || "COELHO");
                             }
                         });
                     } else {
