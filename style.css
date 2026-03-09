@@ -551,78 +551,95 @@ input {
    CONSOLIDAÇÃO DE IMPRESSÃO - VERSÃO FINAL (SEM FOLHA EM BRANCO)
    ============================================================ */
 @media print {
-    /* 1. Configurações de Papel */
+    /* 1. Configurações de Papel e Performance de Renderização */
     @page { 
         size: landscape; 
         margin: 0; 
     }
 
-    /* ESSENCIAL: Força o navegador a não ignorar as cores */
     * {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
+        /* Desativa efeitos que exigem muito processamento da GPU/CPU no PDF */
+        box-shadow: none !important; 
+        text-shadow: none !important; 
+        transition: none !important;
+        animation: none !important;
     }
 
     body { 
         background: white !important; 
         margin: 0 !important;
         padding: 0 !important;
+        /* Impede que o navegador tente 'prever' scrolls, focando no render */
+        overflow: visible !important; 
     }
 
-    .no-print, .modal-overlay, #modalInfo, #controles, button { 
+    /* Esconde elementos pesados da interface radicalmente */
+    .no-print, .modal-overlay, #modalInfo, #controles, button, header, .nav-bar { 
         display: none !important; 
+        content: none !important; /* Remove do fluxo de renderização */
     }
 
-    /* 2. Definição das Fichas */
+    /* 2. Otimização das Fichas (contain: strict acelera o render) */
     .page {
         width: 297mm !important;
+        height: 209mm !important;
         margin: 0 !important;
         padding: 5mm !important;
-        position: relative !important;
-        overflow: hidden !important;
-        height: 209mm !important;
         display: flex !important;
         flex-direction: column !important;
         justify-content: space-between !important;
+        position: relative !important;
+        overflow: hidden !important;
+        /* Avisa ao navegador que o conteúdo desta div não afeta o resto */
+        contain: strict !important; 
     }
 
-   
-
-    /* Quebra de página apenas entre a 1 e a 2 */
+    /* Quebras de Página */
     #pagina-1 { page-break-after: always !important; }
     #pagina-tabela { page-break-after: avoid !important; }
 
-    /* 3. Cores Fixas (Preto) */
+    /* 3. Cores Fixas e Dinâmicas */
     #c-setor, #c2-setor, #c-nome, #c2-nome {
         background-color: black !important;
         color: white !important;
+        -webkit-print-color-adjust: exact !important;
     }
 
-    /* 4. FUNÇÃO (DINÂMICA) - Onde estava o problema */
     #c-funcao, #c2-funcao {
-        /* Usa as variáveis que o JS criou */
         background-color: var(--cor-bg-funcao) !important;
         color: var(--cor-txt-funcao) !important;
         border: none !important;
     }
 
-    /* 5. Inputs da tabela e dados */
+    /* 4. Inputs e Imagens (Redução de Carga) */
     input {
         color: black !important;
         background: transparent !important;
         border: none !important;
+        appearance: none; /* Remove estilos de sistema do input */
     }
 
-    /* Força texto branco nos campos coloridos */
-    #c-setor, #c2-setor, #c-nome, #c2-nome {
-        color: white !important;
+    img {
+        /* Acelera o desenho da imagem no PDF */
+        image-rendering: optimizeSpeed !important;
+        max-height: 120px;
+        will-change: transform;
     }
 
-    /* 6. Modo Reimpressão */
-    .reimpressao-ativa #pagina-1 { display: none !important; }
+    /* 5. Modo Reimpressão (Otimizado) */
+    .reimpressao-ativa #pagina-1 { 
+        display: none !important; 
+    }
     
     .modo-fantasma .epi-table {
-        margin-top: 2mm; /* Ajuste milimetricamente aqui se houver desalinhamento */
+        margin-top: 2mm; 
+    }
+
+    /* Garante que o conteúdo seja impresso em preto mesmo se houver cinzas no layout */
+    .epi-item input {
+        color: #000 !important;
     }
 }
 
@@ -717,3 +734,5 @@ input {
     background-color: transparent !important;
     color: transparent !important; /* Esconde o texto para não sobrepor o original */
 }
+
+
